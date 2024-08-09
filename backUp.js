@@ -1,12 +1,7 @@
-const express = require('express');
+
+
 const { Client,LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode');
-
-const app = express();
-
-app.get('/', (req, res) => {
-    res.send('WhatsApp Web.js Bot is running.');
-});
 
 const client = new Client({
     authStrategy: new LocalAuth({
@@ -14,12 +9,12 @@ const client = new Client({
     })
 });
 
-
 client.on('ready', () => {
     console.log('Client is ready!');
 });
 
 client.on('qr', qr => {
+    // Generate the QR code as a string with more control over the size
     qrcode.toString(qr, { type: 'terminal', small: true }, (err, url) => {
         if (err) {
             console.error(err);
@@ -32,11 +27,14 @@ client.on('qr', qr => {
 client.initialize();
 
 client.on('message_create', message => {
-    if (message.body === '!ping') {
-        client.sendMessage(message.from, 'pong');
-    }
+    setTimeout(() => {
+        if (message.body === 'hi') {
+            // send back "pong" to the chat the message was sent in
+            client.sendMessage(message.from, `${JSON.stringify(message)} `);
+        }
+        // console.log('message \n',message);
+    }, 3000);
 });
 
-module.exports = app;
 
 
