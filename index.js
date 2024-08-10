@@ -46,10 +46,11 @@ mongoose
           "--single-process",
           "--no-zygote",
         ],
-        executablePath:
-          process.env.NODE_env === "production"
-            ? process.env.PUPPETEER_EXECUTABLE_PATH
-            : puppeteer.executablePath(),
+        // executablePath:
+        //   process.env.NODE_env === "production"
+        //     ? process.env.PUPPETEER_EXECUTABLE_PATH
+        //     : puppeteer.executablePath(),
+        executablePath: puppeteer.executablePath(),
       }, // Run Puppeteer in headless mode
     });
 
