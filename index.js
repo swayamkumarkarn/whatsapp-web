@@ -1,8 +1,19 @@
 require('dotenv').config();
+const express = require('express'); // Import Express
 const { Client, RemoteAuth } = require('whatsapp-web.js');
 const { MongoStore } = require('wwebjs-mongo');
 const mongoose = require('mongoose');
-const qrcode = require('qrcode-terminal'); // Import qrcode-terminal
+const qrcode = require('qrcode-terminal');
+
+// Initialize Express app
+const app = express();
+const port = process.env.PORT || 3000; // Use PORT from env or default to 3000
+
+function getRandomValue(min = 4000, max = 9000) {
+    let num = Math.floor(Math.random() * (max - min + 1)) + min;
+    console.log("Random function executed:", num);
+    return num;
+}
 
 mongoose.connect(process.env.MONGODB_URI)
     .then(() => {
@@ -24,9 +35,8 @@ mongoose.connect(process.env.MONGODB_URI)
         });
 
         client.on('remote_session_saved', () => {
-            console.log("session saved ");
+            console.log("Session saved.");
         });
-
 
         client.on('authenticated', (session) => {
             console.log('WhatsApp client is authenticated.');
@@ -38,8 +48,14 @@ mongoose.connect(process.env.MONGODB_URI)
 
         client.on('message_create', message => {
             if (message.body === 'ping') {
-                // send back "pong" to the chat the message was sent in
-                client.sendMessage(message.from, 'pong');
+                setTimeout(() => {
+                    client.sendMessage(message.from, 'pong');
+                }, getRandomValue());
+            }
+            if (message.body === 'hi') {
+                setTimeout(() => {
+                    client.sendMessage(message.from, 'hello');
+                }, getRandomValue());
             }
         });
 
@@ -48,3 +64,13 @@ mongoose.connect(process.env.MONGODB_URI)
     .catch(err => {
         console.error('Failed to connect to MongoDB', err);
     });
+
+// Define a basic route
+app.get('/', (req, res) => {
+    res.send('Hello, your WhatsApp bot is running!');
+});
+
+// Start Express server
+app.listen(port, () => {
+    console.log(`Express server is running on http://localhost:${port}`);
+});
