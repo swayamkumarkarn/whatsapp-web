@@ -1,26 +1,26 @@
-# Use a base image with Puppeteer and dependencies
 FROM ghcr.io/puppeteer/puppeteer:23.0.2
 
-# Install Chromium
+# Install Google Chrome if it's not already included
+USER root
 RUN apt-get update && apt-get install -y \
-    chromium \
+    wget \
+    gnupg \
+    && wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list' \
+    && apt-get update \
+    && apt-get install -y google-chrome-stable \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Set environment variables
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable \
     MONGODB_URI=mongodb+srv://swayamkumarkarn:Swayam123@cluster0.hqhkkrt.mongodb.net/wweb
 
-# Set the working directory in the container
 WORKDIR /usr/src/app
 
-# Install application dependencies
 COPY package*.json ./
 RUN npm ci
-
-# Copy the application code
 COPY . .
 
-# Run the application
 CMD [ "node", "index.js" ]
