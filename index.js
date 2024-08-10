@@ -36,8 +36,11 @@ mongoose.connect(process.env.MONGODB_URI)
             console.error('WhatsApp client authentication failure', msg);
         });
 
-        client.on('message', message => {
-            console.log(message.body);
+        client.on('message_create', message => {
+            if (message.body === 'ping') {
+                // send back "pong" to the chat the message was sent in
+                client.sendMessage(message.from, 'pong');
+            }
         });
 
         client.initialize();
