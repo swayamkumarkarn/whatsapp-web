@@ -1,12 +1,12 @@
-const chromium = require('chrome-aws-lambda');
+require('dotenv').config();
+const express = require('express');
 const { Client } = require('whatsapp-web.js');
 const CustomRemoteAuth = require('./lib/auth/CustomRemoteAuth');
 const { MongoStore } = require('wwebjs-mongo');
 const mongoose = require('mongoose');
 const qrcode = require('qrcode-terminal');
-const express = require('express');
-require('dotenv').config();
 
+// Initialize Express app
 const app = express();
 const port = process.env.PORT || 3000; // Use PORT from env or default to 3000
 
@@ -21,7 +21,7 @@ mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTop
         // Initialize the CustomRemoteAuth strategy
         const auth = new CustomRemoteAuth({
             clientId: 'client-one',
-            dataPath: '/tmp/sessions',  // Use Vercel's /tmp directory
+            dataPath: './sessions',
             store: store,
             backupSyncIntervalMs: 300000, // 5 minutes interval for backup
         });
@@ -29,12 +29,7 @@ mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTop
         // Initialize the WhatsApp client with the custom authentication strategy
         const client = new Client({
             authStrategy: auth,
-            puppeteer: {
-                headless: true,
-                executablePath: await chromium.executablePath,
-                args: chromium.args,
-                defaultViewport: chromium.defaultViewport,
-            }
+            puppeteer: { headless: true }, // Run Puppeteer in headless mode
         });
 
         // Event: QR Code generated
@@ -53,22 +48,29 @@ mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTop
             console.log('[App] Session backup completed and stored in the remote store.');
         });
 
+
         client.on('message_create', message => {
             if (message.body === 'prashant') {
-                setTimeout(() => {
+                // send back "pong" to the chat the message was sent in
+                setTimeout(()=>{
                     client.sendMessage(message.from, 'Bhai Mera');
-                }, 4000);
+
+                },4000)
             }
             if (message.body === 'hi') {
-                setTimeout(() => {
+                // send back "pong" to the chat the message was sent in
+                setTimeout(()=>{
                     client.sendMessage(message.from, 'Coyoki this side');
-                }, 6000);
-            }
+
+                },6000);
+                
+            };
             if (message.body === 'samron') {
-                setTimeout(() => {
+                // send back "pong" to the chat the message was sent in
+                setTimeout(()=>{
                     client.sendMessage(message.from, 'ohh! you know me');
-                }, 9000);
-            }
+
+                },9000)};
         });
 
         // Event: Authentication success

@@ -7,9 +7,11 @@ yarn-error.log*
 lerna-debug.log*
 .pnpm-debug.log*
 
-
+.npmrc
 .wwebjs_auth
 .wwebjs_cache
+
+package-lock.json
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
