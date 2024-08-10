@@ -5,7 +5,9 @@ const CustomRemoteAuth = require("./lib/auth/CustomRemoteAuth");
 const { MongoStore } = require("wwebjs-mongo");
 const mongoose = require("mongoose");
 const qrcode = require("qrcode-terminal");
-const { default: puppeteer } = require("puppeteer");
+// const { default: puppeteer } = require("puppeteer");
+const chrome = require("chrome-aws-lambda");
+const puppeteer = require("puppeteer-core");
 
 // Initialize Express app
 const app = express();
@@ -33,17 +35,22 @@ mongoose
     // Initialize the WhatsApp client with the custom authentication strategy
     const client = new Client({
       authStrategy: auth,
-      puppeteer: {
-        headless: true,
+      puppeteer:{
         args: [
+          ...chrome.args,
+          "--hide-scrollbars",
+          "--disable-web-security",
           "--no-sandbox",
           "--disable-setuid-sandbox",
           "--disable-gpu",
-          "--no-zygote",
         ],
-        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath(),
+        defaultViewport: chrome.defaultViewport,
+        executablePath: await chrome.executablePath,
+        headless: true,
+        ignoreHTTPSErrors: true,
+      }
       }, // Run Puppeteer in headless mode
-    });
+    );
 
     // Event: QR Code generated
     client.on("qr", (qr) => {
