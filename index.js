@@ -41,7 +41,7 @@ mongoose
           "--disable-gpu",
           "--no-zygote",
         ],
-        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath(),
+        // executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath(),
       }, // Run Puppeteer in headless mode
     });
 
