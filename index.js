@@ -40,10 +40,6 @@ mongoose
           "--no-sandbox",
           "--disable-setuid-sandbox",
           "--disable-gpu",
-          "--disable-dev-shm-usage",
-          "--disable-software-rasterizer",
-          "--remote-debugging-port=9222",
-          "--single-process",
           "--no-zygote",
         ],
         // executablePath:
