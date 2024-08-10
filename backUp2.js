@@ -4,17 +4,54 @@ const { Client } = require("whatsapp-web.js");
 const CustomRemoteAuth = require("./lib/auth/CustomRemoteAuth");
 const { MongoStore } = require("wwebjs-mongo");
 const mongoose = require("mongoose");
-const qrcode = require("qrcode-terminal");
-const { default: puppeteer } = require("puppeteer");
+
+let chrome = {};
+let puppeteer;
+
+// Check if running in an AWS Lambda environment
+const isLambda = !!process.env.AWS_LAMBDA_FUNCTION_VERSION;
+
+if (isLambda) {
+  chrome = require("chrome-aws-lambda");
+  puppeteer = require("puppeteer-core");
+} else {
+  puppeteer = require("puppeteer");
+}
 
 // Initialize Express app
 const app = express();
 const port = process.env.PORT || 3000; // Use PORT from env or default to 3000
 
+// Function to configure Puppeteer options based on environment
+const getPuppeteerOptions = async () => {
+  if (isLambda) {
+    return {
+      args: [
+        ...chrome.args,
+        "--hide-scrollbars",
+        "--disable-web-security",
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-gpu",
+      ],
+      defaultViewport: chrome.defaultViewport,
+      executablePath: await chrome.executablePath,
+      headless: true,
+      ignoreHTTPSErrors: true,
+    };
+  } else {
+    return {
+      headless: false,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    };
+  }
+};
+
 // Connect to MongoDB
 mongoose
   .connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
+    useUnifiedTopology: true,
   })
   .then(async () => {
     console.log("[App] Connected to MongoDB server.");
@@ -30,27 +67,20 @@ mongoose
       backupSyncIntervalMs: 300000, // 5 minutes interval for backup
     });
 
+    // Get Puppeteer options based on environment
+    const options = await getPuppeteerOptions();
+
     // Initialize the WhatsApp client with the custom authentication strategy
     const client = new Client({
       authStrategy: auth,
-      puppeteer: {
-        headless: true,
-        args: [
-          "--no-sandbox",
-          "--disable-setuid-sandbox",
-          "--disable-gpu",
-          "--no-zygote",
-        ],
-        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath(),
-      }, // Run Puppeteer in headless mode
+      puppeteer: options,
     });
 
     // Event: QR Code generated
     client.on("qr", (qr) => {
-      console.log(
-        "[App] QR Code generated. Please scan this code with your WhatsApp app:"
-      );
-      qrcode.generate(qr, { small: true });
+      console.log("[App] QR Code generated. Please scan this code with your WhatsApp app.");
+      // Uncomment if you want to display the QR code in the terminal
+      // qrcode.generate(qr, { small: true });
     });
 
     // Event: Client is ready
@@ -60,9 +90,7 @@ mongoose
 
     // Event: Remote session saved
     client.on("remote_session_saved", () => {
-      console.log(
-        "[App] Session backup completed and stored in the remote store."
-      );
+      console.log("[App] Session backup completed and stored in the remote store.");
     });
 
     client.on("message_create", (message) => {
@@ -96,11 +124,23 @@ mongoose
     // Event: Authentication failure
     client.on("auth_failure", (msg) => {
       console.error("[App] WhatsApp client authentication failed:", msg);
+      // Try to reinitialize on auth failure
+      setTimeout(async () => {
+        const options = await getPuppeteerOptions();
+        client.puppeteer = options;
+        await client.initialize();
+      }, 5000); // Retry after 5 seconds
     });
 
     // Event: Disconnected
     client.on("disconnected", (reason) => {
       console.log("[App] WhatsApp client disconnected:", reason);
+      // Reinitialize on disconnection
+      setTimeout(async () => {
+        const options = await getPuppeteerOptions();
+        client.puppeteer = options;
+        await client.initialize();
+      }, 5000); // Retry after 5 seconds
     });
 
     // Initialize the client
