@@ -1,42 +1,47 @@
-const express = require('express');
-const { Client,LocalAuth } = require('whatsapp-web.js');
-const qrcode = require('qrcode');
+require('dotenv').config();
+const { Client, RemoteAuth } = require('whatsapp-web.js');
+const { MongoStore } = require('wwebjs-mongo');
+const mongoose = require('mongoose');
+const qrcode = require('qrcode-terminal'); // Import qrcode-terminal
 
-const app = express();
+mongoose.connect(process.env.MONGODB_URI)
+    .then(() => {
+        console.log('Connected to MongoDB server.');
+        const store = new MongoStore({ mongoose: mongoose });
+        const client = new Client({
+            authStrategy: new RemoteAuth({
+                store: store,
+                backupSyncIntervalMs: 300000 // Backup every 5 minutes
+            })
+        });
+        
+        client.on('qr', qr => {
+            qrcode.generate(qr, { small: true });
+        });
 
-app.get('/', (req, res) => {
-    res.send('WhatsApp Web.js Bot is running.');
-});
+        client.on('ready', () => {
+            console.log('WhatsApp client is ready.');
+        });
 
-const client = new Client({
-    authStrategy: new LocalAuth({
-        dataPath: 'SamroN'
+        client.on('remote_session_saved', () => {
+            console.log("session saved ");
+        });
+
+
+        client.on('authenticated', (session) => {
+            console.log('WhatsApp client is authenticated.');
+        });
+
+        client.on('auth_failure', msg => {
+            console.error('WhatsApp client authentication failure', msg);
+        });
+
+        client.on('message', message => {
+            console.log(message.body);
+        });
+
+        client.initialize();
     })
-});
-
-
-client.on('ready', () => {
-    console.log('Client is ready!');
-});
-
-client.on('qr', qr => {
-    qrcode.toString(qr, { type: 'terminal', small: true }, (err, url) => {
-        if (err) {
-            console.error(err);
-        } else {
-            console.log(url);
-        }
+    .catch(err => {
+        console.error('Failed to connect to MongoDB', err);
     });
-});
-
-client.initialize();
-
-client.on('message_create', message => {
-    if (message.body === '!ping') {
-        client.sendMessage(message.from, 'pong');
-    }
-});
-
-module.exports = app;
-
-
