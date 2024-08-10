@@ -4,8 +4,21 @@ const { Client } = require("whatsapp-web.js");
 const CustomRemoteAuth = require("./lib/auth/CustomRemoteAuth");
 const { MongoStore } = require("wwebjs-mongo");
 const mongoose = require("mongoose");
-const qrcode = require("qrcode-terminal");
-const { default: puppeteer } = require("puppeteer");
+// const qrcode = require("qrcode-terminal");
+
+let chrome = {};
+let puppeteer;
+
+
+if (process.env.AWS_LAMBDA_FUNCTION_VERSION) {
+    chrome = require("chrome-aws-lambda");
+    puppeteer = require("puppeteer-core");
+  } else {
+    puppeteer = require("puppeteer");
+  }
+  
+
+
 
 // Initialize Express app
 const app = express();
@@ -18,6 +31,18 @@ mongoose
   })
   .then(async () => {
     console.log("[App] Connected to MongoDB server.");
+
+    let options = {};
+
+    if (process.env.AWS_LAMBDA_FUNCTION_VERSION) {
+      options = {
+        args: [...chrome.args, "--hide-scrollbars", "--disable-web-security"],
+        defaultViewport: chrome.defaultViewport,
+        executablePath: await chrome.executablePath,
+        headless: true,
+        ignoreHTTPSErrors: true,
+      };
+    }
 
     // Create a new MongoStore instance
     const store = new MongoStore({ mongoose: mongoose });
@@ -33,16 +58,7 @@ mongoose
     // Initialize the WhatsApp client with the custom authentication strategy
     const client = new Client({
       authStrategy: auth,
-      puppeteer: {
-        headless: true,
-        args: [
-          "--no-sandbox",
-          "--disable-setuid-sandbox",
-          "--disable-gpu",
-          "--no-zygote",
-        ],
-        // executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath(),
-      }, // Run Puppeteer in headless mode
+      puppeteer: options,
     });
 
     // Event: QR Code generated
@@ -50,7 +66,7 @@ mongoose
       console.log(
         "[App] QR Code generated. Please scan this code with your WhatsApp app:"
       );
-      qrcode.generate(qr, { small: true });
+    //   qrcode.generate(qr, { small: true });
     });
 
     // Event: Client is ready
