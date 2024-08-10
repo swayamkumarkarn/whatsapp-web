@@ -15,7 +15,6 @@ const port = process.env.PORT || 3000; // Use PORT from env or default to 3000
 mongoose
   .connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
-    useUnifiedTopology: true,
   })
   .then(async () => {
     console.log("[App] Connected to MongoDB server.");
@@ -42,11 +41,7 @@ mongoose
           "--disable-gpu",
           "--no-zygote",
         ],
-        // executablePath:
-        //   process.env.NODE_env === "production"
-        //     ? process.env.PUPPETEER_EXECUTABLE_PATH
-        //     : puppeteer.executablePath(),
-        executablePath: puppeteer.executablePath(),
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath(),
       }, // Run Puppeteer in headless mode
     });
 
@@ -71,23 +66,25 @@ mongoose
     });
 
     client.on("message_create", (message) => {
-      if (message.body === "prashant") {
-        // send back "pong" to the chat the message was sent in
-        setTimeout(() => {
-          client.sendMessage(message.from, "Bhai Mera");
-        }, 4000);
+      let response;
+      switch (message.body) {
+        case "prashant":
+          response = "Bhai Mera";
+          break;
+        case "hi":
+          response = "Coyoki this side";
+          break;
+        case "samron":
+          response = "ohh! you know me";
+          break;
+        default:
+          response = null;
       }
-      if (message.body === "hi") {
-        // send back "pong" to the chat the message was sent in
+
+      if (response) {
         setTimeout(() => {
-          client.sendMessage(message.from, "Coyoki this side");
-        }, 6000);
-      }
-      if (message.body === "samron") {
-        // send back "pong" to the chat the message was sent in
-        setTimeout(() => {
-          client.sendMessage(message.from, "ohh! you know me");
-        }, 9000);
+          client.sendMessage(message.from, response);
+        }, 4000); // Adjust delay if needed
       }
     });
 
@@ -108,7 +105,6 @@ mongoose
 
     // Initialize the client
     await client.initialize();
-
     console.log("[App] WhatsApp client initialized.");
   })
   .catch((err) => {
